@@ -1,0 +1,7 @@
+package main
+
+type Markdown Peg {
+    Document
+}
+
+Markdown <- .* !.
