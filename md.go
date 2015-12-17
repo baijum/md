@@ -2,6 +2,7 @@ package main
 
 import (
 	"flag"
+	"fmt"
 	"io/ioutil"
 	"log"
 	"path/filepath"
@@ -10,6 +11,10 @@ import (
 // Document represents a markdown document
 type Document struct {
 	Title string
+}
+
+func (d *Document) HeadingOne(text string) {
+	fmt.Println("Content:", text)
 }
 
 var dir = flag.String("dir", "", "Markdown files directory")
@@ -34,6 +39,6 @@ func main() {
 		if err := md.Parse(); err != nil {
 			log.Fatal(err)
 		}
-		log.Println(md.Title)
+		md.Execute()
 	}
 }

@@ -4,4 +4,14 @@ type Markdown Peg {
     Document
 }
 
-Markdown <- .* !.
+Markdown <- h1text nl !.
+
+h1text <- h1 sp <str> { p.HeadingOne(buffer[begin:end]) }
+
+str <- [^\n]+
+
+h1 <- '#'
+
+sp <- ( ' ' / '\t' )*
+
+nl <- '\n'

@@ -15,6 +15,13 @@ type pegRule uint8
 const (
 	ruleUnknown pegRule = iota
 	ruleMarkdown
+	ruleh1text
+	rulestr
+	ruleh1
+	rulesp
+	rulenl
+	rulePegText
+	ruleAction0
 
 	rulePre_
 	rule_In_
@@ -24,6 +31,13 @@ const (
 var rul3s = [...]string{
 	"Unknown",
 	"Markdown",
+	"h1text",
+	"str",
+	"h1",
+	"sp",
+	"nl",
+	"PegText",
+	"Action0",
 
 	"Pre_",
 	"_In_",
@@ -344,7 +358,7 @@ type Markdown struct {
 
 	Buffer string
 	buffer []rune
-	rules  [2]func() bool
+	rules  [9]func() bool
 	Parse  func(rule ...int) error
 	Reset  func()
 	tokenTree
@@ -413,6 +427,23 @@ func (p *Markdown) Highlighter() {
 	p.tokenTree.PrintSyntax()
 }
 
+func (p *Markdown) Execute() {
+	buffer, _buffer, text, begin, end := p.Buffer, p.buffer, "", 0, 0
+	for token := range p.tokenTree.Tokens() {
+		switch token.pegRule {
+
+		case rulePegText:
+			begin, end = int(token.begin), int(token.end)
+			text = string(_buffer[begin:end])
+
+		case ruleAction0:
+			p.HeadingOne(buffer[begin:end])
+
+		}
+	}
+	_, _, _, _, _ = buffer, _buffer, text, begin, end
+}
+
 func (p *Markdown) Init() {
 	p.buffer = []rune(p.Buffer)
 	if len(p.buffer) == 0 || p.buffer[len(p.buffer)-1] != end_symbol {
@@ -456,32 +487,132 @@ func (p *Markdown) Init() {
 		return false
 	}
 
+	/*matchChar := func(c byte) bool {
+		if buffer[position] == c {
+			position++
+			return true
+		}
+		return false
+	}*/
+
 	_rules = [...]func() bool{
 		nil,
-		/* 0 Markdown <- <(.* !.)> */
+		/* 0 Markdown <- <(h1text nl !.)> */
 		func() bool {
 			position0, tokenIndex0, depth0 := position, tokenIndex, depth
 			{
 				position1 := position
 				depth++
-			l2:
 				{
-					position3, tokenIndex3, depth3 := position, tokenIndex, depth
-					if !matchDot() {
-						goto l3
+					position2 := position
+					depth++
+					{
+						position3 := position
+						depth++
+						if buffer[position] != rune('#') {
+							goto l0
+						}
+						position++
+						depth--
+						add(ruleh1, position3)
 					}
-					goto l2
-				l3:
-					position, tokenIndex, depth = position3, tokenIndex3, depth3
+					{
+						position4 := position
+						depth++
+					l5:
+						{
+							position6, tokenIndex6, depth6 := position, tokenIndex, depth
+							{
+								position7, tokenIndex7, depth7 := position, tokenIndex, depth
+								if buffer[position] != rune(' ') {
+									goto l8
+								}
+								position++
+								goto l7
+							l8:
+								position, tokenIndex, depth = position7, tokenIndex7, depth7
+								if buffer[position] != rune('\t') {
+									goto l6
+								}
+								position++
+							}
+						l7:
+							goto l5
+						l6:
+							position, tokenIndex, depth = position6, tokenIndex6, depth6
+						}
+						depth--
+						add(rulesp, position4)
+					}
+					{
+						position9 := position
+						depth++
+						{
+							position10 := position
+							depth++
+							{
+								position13, tokenIndex13, depth13 := position, tokenIndex, depth
+								if buffer[position] != rune('\n') {
+									goto l13
+								}
+								position++
+								goto l0
+							l13:
+								position, tokenIndex, depth = position13, tokenIndex13, depth13
+							}
+							if !matchDot() {
+								goto l0
+							}
+						l11:
+							{
+								position12, tokenIndex12, depth12 := position, tokenIndex, depth
+								{
+									position14, tokenIndex14, depth14 := position, tokenIndex, depth
+									if buffer[position] != rune('\n') {
+										goto l14
+									}
+									position++
+									goto l12
+								l14:
+									position, tokenIndex, depth = position14, tokenIndex14, depth14
+								}
+								if !matchDot() {
+									goto l12
+								}
+								goto l11
+							l12:
+								position, tokenIndex, depth = position12, tokenIndex12, depth12
+							}
+							depth--
+							add(rulestr, position10)
+						}
+						depth--
+						add(rulePegText, position9)
+					}
+					{
+						add(ruleAction0, position)
+					}
+					depth--
+					add(ruleh1text, position2)
 				}
 				{
-					position4, tokenIndex4, depth4 := position, tokenIndex, depth
+					position16 := position
+					depth++
+					if buffer[position] != rune('\n') {
+						goto l0
+					}
+					position++
+					depth--
+					add(rulenl, position16)
+				}
+				{
+					position17, tokenIndex17, depth17 := position, tokenIndex, depth
 					if !matchDot() {
-						goto l4
+						goto l17
 					}
 					goto l0
-				l4:
-					position, tokenIndex, depth = position4, tokenIndex4, depth4
+				l17:
+					position, tokenIndex, depth = position17, tokenIndex17, depth17
 				}
 				depth--
 				add(ruleMarkdown, position1)
@@ -491,6 +622,19 @@ func (p *Markdown) Init() {
 			position, tokenIndex, depth = position0, tokenIndex0, depth0
 			return false
 		},
+		/* 1 h1text <- <(h1 sp <str> Action0)> */
+		nil,
+		/* 2 str <- <(!'\n' .)+> */
+		nil,
+		/* 3 h1 <- <'#'> */
+		nil,
+		/* 4 sp <- <(' ' / '\t')*> */
+		nil,
+		/* 5 nl <- <'\n'> */
+		nil,
+		nil,
+		/* 8 Action0 <- <{ p.HeadingOne(buffer[begin:end]) }> */
+		nil,
 	}
 	p.rules = _rules
 }
